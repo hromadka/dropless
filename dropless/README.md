@@ -1,6 +1,6 @@
-\# dropless
+# dropless
 
-dropless.py
+## dropless.py
 
 --window 51 = wider window gives a better background model when spray is intermittent  
 
@@ -15,7 +15,7 @@ dropless.py
 
 
 
-resize_pngs.py
+## resize_pngs.py
 
 Outputs go to path/to/frames/resized/ by default. A few useful flags:  
 
@@ -29,7 +29,7 @@ Outputs go to path/to/frames/resized/ by default. A few useful flags:
 
 
 
-framer.py
+## framer.py
 
 --window = start at 15; increase to 25+ for heavy spray that persists many frames  
 
