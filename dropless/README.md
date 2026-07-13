@@ -28,3 +28,9 @@ framer.py
 --detector sift with pip install opencv-contrib-python = worth trying if ORB alignment is failing on low-texture open-water shots (no coastline in frame)
 --fallback-no-align = safety net if many frames fail to align (outputs a warning count in the final stats)
 
+
+datasets:
+
+raindrops on windshield = https://github.com/Evocargo/RaindropsOnWindshield
+
+
