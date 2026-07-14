@@ -106,7 +106,7 @@ def detect_horizon_angle(
     angles = []
     lengths = []
 
-    for x1, y1, x2, y2 in lines[:, 0]:
+    for x1, y1, x2, y2 in lines.reshape(-1, 4):
         dx = x2 - x1
         dy = y2 - y1
         if dx == 0:
@@ -154,7 +154,7 @@ def detect_horizon_line_for_debug(
     tol = np.deg2rad(angle_tolerance_deg)
     best_len = 0
     best_seg = None
-    for x1, y1, x2, y2 in lines[:, 0]:
+    for x1, y1, x2, y2 in lines.reshape(-1, 4):
         dx, dy = x2 - x1, y2 - y1
         if dx == 0:
             continue

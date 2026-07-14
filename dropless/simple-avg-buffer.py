@@ -108,8 +108,12 @@ def compute_homography(
         return None, 0
 
     matches = matcher.knnMatch(des_s, des_d, k=2)
-    good = [m for m, n in matches
-            if len([m, n]) == 2 and m.distance < ratio_thresh * n.distance]
+    good = []
+    for pair in matches:
+        if len(pair) == 2:
+            m, n = pair
+            if m.distance < ratio_thresh * n.distance:
+                good.append(m)
 
     if len(good) < min_inliers:
         return None, 0

@@ -34,17 +34,23 @@ Usage
 
 Examples
 --------
-  # Defaults: ORB, window=15, threshold=30, median infill
+  # Default output goes to frames/cleaned/
   python framer.py frames/
 
+  # Explicit output subfolder (relative to cwd)
+  python framer.py frames/ --out cleaned_v1
+
+  # Absolute output path (separate drive/location)
+  python framer.py frames/ --out D:/output/cleaned
+
+  # Relative path outside the source folder
+  python framer.py frames/ --out ../cleaned
+
   # Wider window, debug panels, Telea inpainting
-  python framer.py frames/ --window 25 --infill telea --debug
+  python framer.py frames/ --out cleaned --window 25 --infill telea --debug
 
   # SIFT (higher quality on textureless water/sky, needs opencv-contrib)
-  python framer.py frames/ --detector sift --max-features 4000
-
-  # Aggressive settings for heavy spray
-  python framer.py frames/ --threshold 20 --min-area 20 --morph-close 11
+  python framer.py frames/ --out cleaned --detector sift --max-features 4000
 """
 
 from __future__ import annotations
@@ -126,8 +132,12 @@ def compute_homography(
         return None
 
     matches = matcher.knnMatch(des_s, des_d, k=2)
-    good = [m for m, n in matches if len([m, n]) == 2 and
-            m.distance < ratio_thresh * n.distance]
+    good = []
+    for pair in matches:
+        if len(pair) == 2:
+            m, n = pair
+            if m.distance < ratio_thresh * n.distance:
+                good.append(m)
 
     if len(good) < min_inliers:
         return None
@@ -299,11 +309,11 @@ def process_folder(args: argparse.Namespace) -> None:
         print(f"No PNG files found in: {src}")
         return
 
-    out_dir = src / args.out
-    out_dir.mkdir(exist_ok=True)
-    dbg_dir = (src / (args.out + "_debug")) if args.debug else None
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    dbg_dir = (out_dir.parent / (out_dir.name + "_debug")) if args.debug else None
     if dbg_dir:
-        dbg_dir.mkdir(exist_ok=True)
+        dbg_dir.mkdir(parents=True, exist_ok=True)
 
     half = args.window // 2
     n = len(pngs)
@@ -430,8 +440,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     p.add_argument("folder", type=Path,
                    help="Folder containing sequential PNG frames (sorted by filename).")
-    p.add_argument("--out", default="cleaned", metavar="NAME",
-                   help="Output subfolder name. Default: cleaned")
+    p.add_argument("--out", default=None, metavar="PATH",
+                   help="Output folder path. Accepts absolute paths "
+                        "(e.g. /data/cleaned) or relative paths "
+                        "(e.g. ../cleaned or cleaned). "
+                        "Default: <input_folder>/cleaned")
 
     p.add_argument("--window", type=int, default=15, metavar="N",
                    help="Sliding window size: how many frames to use per reference. "
@@ -497,6 +510,9 @@ def main(argv=None):
         parser.error(f"Folder not found or not a directory: {args.folder}")
     if args.window < 2:
         parser.error("--window must be >= 2")
+
+    if args.out is None:
+        args.out = args.folder / "cleaned"
 
     process_folder(args)
     return 0

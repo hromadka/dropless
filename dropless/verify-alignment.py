@@ -54,8 +54,12 @@ def compute_homography(src_gray, dst_gray, detector, matcher,
     if des_s is None or des_d is None or len(kp_s) < 4 or len(kp_d) < 4:
         return None, 0
     matches = matcher.knnMatch(des_s, des_d, k=2)
-    good = [m for m, n in matches
-            if len([m, n]) == 2 and m.distance < ratio_thresh * n.distance]
+    good = []
+    for pair in matches:
+        if len(pair) == 2:
+            m, n = pair
+            if m.distance < ratio_thresh * n.distance:
+                good.append(m)
     if len(good) < min_inliers:
         return None, 0
     pts_s = np.float32([kp_s[m.queryIdx].pt for m in good])
