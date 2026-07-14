@@ -250,9 +250,6 @@ def run(args: argparse.Namespace) -> None:
 
     out_dir = Path(args.out) if args.out else src / "leveled"
     out_dir.mkdir(parents=True, exist_ok=True)
-    dbg_dir = (out_dir.parent / (out_dir.name + "_debug")) if args.debug else None
-    if dbg_dir:
-        dbg_dir.mkdir(parents=True, exist_ok=True)
 
     smoother = AngleSmoother(args.smooth) if args.smooth > 1 else None
 
@@ -288,6 +285,51 @@ def run(args: argparse.Namespace) -> None:
         # Smooth
         angle = smoother.update(raw_angle) if smoother else raw_angle
 
+        if args.debug:
+            # Debug mode: annotate the original frame, do NOT rotate.
+            # Green line  = detected horizon (extended to full image width).
+            # Red line    = where the horizon would be after leveling
+            #               (horizontal line through the segment midpoint).
+            dbg = frame.copy()
+            seg = detect_horizon_line_for_debug(
+                gray, raw_angle if raw_angle is not None else 0.0,
+                canny_low=args.canny_low,
+                canny_high=args.canny_high,
+                hough_thresh=args.hough_thresh,
+                angle_tolerance_deg=args.angle_tol,
+            )
+            if seg is not None:
+                x1, y1, x2, y2 = seg
+                mid_x = (x1 + x2) / 2.0
+                mid_y = (y1 + y2) / 2.0
+
+                # Green: extend detected line across the full width
+                if x2 != x1:
+                    slope = (y2 - y1) / (x2 - x1)
+                    left_y  = int(mid_y - slope * mid_x)
+                    right_y = int(mid_y + slope * (W_img - mid_x))
+                else:
+                    left_y = right_y = int(mid_y)
+                cv2.line(dbg, (0, left_y), (W_img, right_y), (0, 255, 0), 2)
+
+                # Red: horizontal line at the midpoint y (post-leveling position)
+                red_y = int(mid_y)
+                cv2.line(dbg, (0, red_y), (W_img, red_y), (0, 0, 255), 2)
+
+            if angle is not None:
+                label = f"raw={raw_angle:.2f}  used={angle:.2f} deg"
+            else:
+                label = "no horizon detected"
+            cv2.putText(dbg, label, (10, 32),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 220, 255), 2)
+            cv2.imwrite(str(out_dir / png.name), dbg)
+
+            if angle is None:
+                skipped += 1
+            else:
+                detected += 1
+            continue
+
         if angle is None:
             # No horizon found: pass frame through unchanged
             cv2.imwrite(str(out_dir / png.name), frame)
@@ -309,27 +351,6 @@ def run(args: argparse.Namespace) -> None:
             rotated = cv2.resize(rotated, (W_img, H_img), interpolation=cv2.INTER_LINEAR)
 
         cv2.imwrite(str(out_dir / png.name), rotated)
-
-        if dbg_dir is not None:
-            dbg = frame.copy()
-            seg = detect_horizon_line_for_debug(
-                gray, angle,
-                canny_low=args.canny_low,
-                canny_high=args.canny_high,
-                hough_thresh=args.hough_thresh,
-                angle_tolerance_deg=args.angle_tol,
-            )
-            if seg:
-                cv2.line(dbg, (seg[0], seg[1]), (seg[2], seg[3]), (0, 255, 0), 2)
-            label = f"raw={raw_angle:.2f}  used={angle:.2f} deg"
-            cv2.putText(dbg, label, (10, 32),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 220, 255), 2)
-            # Side-by-side: original with overlay | leveled
-            sep = np.zeros((H_img, 3, 3), dtype=np.uint8)
-            out_vis = rotated if rotated.shape == frame.shape else cv2.resize(
-                rotated, (W_img, H_img))
-            cv2.imwrite(str(dbg_dir / png.name),
-                        np.hstack([dbg, sep, out_vis]))
 
     print(f"\nDone.")
     print(f"  Leveled  : {detected}")
@@ -382,8 +403,9 @@ def build_parser() -> argparse.ArgumentParser:
                          "after rotation, then rescale to original size.")
 
     p.add_argument("--debug", action="store_true",
-                   help="Write side-by-side debug images showing detected "
-                        "horizon line and corrected frame.")
+                   help="Save annotated originals (no rotation applied). "
+                        "Green line = detected horizon. "
+                        "Red line = where horizon would land after leveling.")
     return p
 
 
