@@ -274,8 +274,9 @@ def run(args: argparse.Namespace) -> None:
             continue
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        search_gray = gray[: H_img * 2 // 3, :]   # top 2/3 only
         raw_angle = detect_horizon_angle(
-            gray,
+            search_gray,
             canny_low=args.canny_low,
             canny_high=args.canny_high,
             hough_thresh=args.hough_thresh,
@@ -292,7 +293,7 @@ def run(args: argparse.Namespace) -> None:
             #               (horizontal line through the segment midpoint).
             dbg = frame.copy()
             seg = detect_horizon_line_for_debug(
-                gray, raw_angle if raw_angle is not None else 0.0,
+                search_gray, raw_angle if raw_angle is not None else 0.0,
                 canny_low=args.canny_low,
                 canny_high=args.canny_high,
                 hough_thresh=args.hough_thresh,

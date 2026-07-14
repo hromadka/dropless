@@ -44,7 +44,7 @@ Outputs go to path/to/frames/resized/ by default. A few useful flags:
 
 ## horizon-stabilize.py
 
-Horizon detection uses probabilistic Hough lines on Canny edges. Lines are filtered to those within --angle-tol degrees of horizontal (default ±20°), then the tilt angle is computed as a length-weighted median — longer lines vote more heavily, which naturally favours the actual horizon over short wave edges or boat structure.
+Horizon detection uses probabilistic Hough lines on Canny edges.  Detector only looks at top 2/3 of image due to boat hull in scene. Lines are filtered to those within --angle-tol degrees of horizontal (default ±20°), then the tilt angle is computed as a length-weighted median — longer lines vote more heavily, which naturally favours the actual horizon over short wave edges or boat structure.
 Rotation is a pure in-plane rotation around the image centre, so lens-fixed artefacts like water droplets stay exactly where they are in image space — which is exactly the property you need before running simple-avg-buffer.py or framer.py.
 
 Key parameters to tune on your footage:
@@ -53,7 +53,7 @@ Key parameters to tune on your footage:
 --angle-tol 20 = the ±20° search window; tighten to ±10° if boat structure (masts, railings) is being mistaken for the horizon  
 --max-angle 10 = safety clamp; if a frame has no horizon, the smoother's last value is used but never beyond this limit  
 --crop = removes the black triangular corners introduced by rotation and rescales back to original resolution; trades a small amount of field of view for clean edges  
---debug = saves side-by-side images showing the detected green horizon line and the corrected frame, essential for first-run tuning  
+--debug = saves images showing the detected green horizon line and the red corrected horizon line
 --smooth 5 (default) = applies a 5-frame causal moving average over detected angles to suppress frame-to-frame jitter from waves disturbing the detection. Increase this for rougher sea conditions.  
 
 
