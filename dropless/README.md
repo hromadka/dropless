@@ -17,7 +17,7 @@
 
 ## resize_pngs.py
 
-Outputs go to path/to/frames/resized/ by default. A few useful flags:  
+Outputs go to path/to/frames/resized/ by default.   
 
 
 --out NAME = change the subfolder name  
@@ -44,10 +44,9 @@ Outputs go to path/to/frames/resized/ by default. A few useful flags:
 
 ## horizon-stabilize.py
 
-Horizon detection uses probabilistic Hough lines on Canny edges.  Detector only looks at top 2/3 of image due to boat hull in scene. Lines are filtered to those within --angle-tol degrees of horizontal (default ±20°), then the tilt angle is computed as a length-weighted median — longer lines vote more heavily, which naturally favours the actual horizon over short wave edges or boat structure.
-Rotation is a pure in-plane rotation around the image centre, so lens-fixed artefacts like water droplets stay exactly where they are in image space — which is exactly the property you need before running simple-avg-buffer.py or framer.py.
-
-Key parameters to tune on your footage:
+Does not work well.
+Hough line detector only looks at top 2/3 of image due to boat hull in scene. Lines are filtered to those within --angle-tol degrees of horizontal (default 20 degrees), then the tilt angle is computed as a length-weighted median.
+Rotation is a pure in-plane rotation around the image centroid, so lens-fixed artifacts like water droplets don't move.
 
 --hough-thresh 80 = lower this (e.g. 50) if the horizon isn't being detected because it's hazy or low-contrast  
 --angle-tol 20 = the ±20° search window; tighten to ±10° if boat structure (masts, railings) is being mistaken for the horizon  
@@ -57,15 +56,23 @@ Key parameters to tune on your footage:
 --smooth 5 (default) = applies a 5-frame causal moving average over detected angles to suppress frame-to-frame jitter from waves disturbing the detection. Increase this for rougher sea conditions.  
 
 
-Suggested pipeline order:  
-horizon-stabilize.py frames/           > frames/leveled/  
+
+
+## horizon-stabilize-otsu.py
+
+see above, but with Otsu columns (light sky / dark water) --> RANSAC approach.
+
+
+
+## pipeline concept
+
+horizon-stabilize-otsu.py frames/           > frames/leveled/  
 simple-avg-buffer.py frames/leveled/   > frames/leveled/averaged/  
 framer.py frames/leveled/              > frames/leveled/cleaned/  
 
 
 
-
-datasets:
+## datasets:
 
 raindrops on windshield = https://github.com/Evocargo/RaindropsOnWindshield
 
